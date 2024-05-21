@@ -1,0 +1,15 @@
+current directory: /Users/hirajgajera/Codes/Projects/React-Native/Recipe_Sharing/Front_End/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+/Users/hirajgajera/.rbenv/versions/2.7.6/bin/ruby -I /Users/hirajgajera/.rbenv/versions/2.7.6/lib/ruby/2.7.0 -r ./siteconf20240521-5329-icr8ze.rb extconf.rb
+creating Makefile
+
+current directory: /Users/hirajgajera/Codes/Projects/React-Native/Recipe_Sharing/Front_End/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+make "DESTDIR=" clean
+
+current directory: /Users/hirajgajera/Codes/Projects/React-Native/Recipe_Sharing/Front_End/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+make "DESTDIR="
+compiling nkf.c
+linking shared-object nkf.bundle
+
+current directory: /Users/hirajgajera/Codes/Projects/React-Native/Recipe_Sharing/Front_End/vendor/bundle/ruby/2.7.0/gems/nkf-0.2.0/ext/nkf
+make "DESTDIR=" install
+/usr/local/bin/ginstall -c -m 0755 nkf.bundle ./.gem.20240521-5329-16hyt5e
