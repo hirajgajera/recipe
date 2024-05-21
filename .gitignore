@@ -32,18 +32,12 @@ local.properties
 !debug.keystore
 
 # node.js
-back-end/node_modules/
-frontend/node_modules/
+node_modules/
 npm-debug.log
 yarn-error.log
 
-# fastlane
-# It is recommended to not store the screenshots in the git repo. Instead, use fastlane to re-generate the
-# screenshots whenever they are needed.
-# For more information about the recommended setup visit:
-# https://docs.fastlane.tools/best-practices/source-control/
+# fastlane (adjust paths as needed)
 **/fastlane/report.xml
-**/fastlane/Preview.html
 **/fastlane/screenshots
 **/fastlane/test_output
 
@@ -54,10 +48,10 @@ yarn-error.log
 **/Pods/
 /vendor/bundle/
 
-# Temporary files created by Metro to check the health of the file watcher
+# Temporary Metro files
 .metro-health-check*
 
-# testing
+# Testing
 /coverage
 
 # Yarn
