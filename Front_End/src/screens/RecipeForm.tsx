@@ -10,59 +10,13 @@ import {
   Alert,
   Keyboard,
 } from 'react-native';
-import {TouchableOpacity} from 'react-native-gesture-handler';
+import {ScrollView, TouchableOpacity} from 'react-native-gesture-handler';
 import {RootStackParamList} from '../types/navigation';
-import {gql, useLazyQuery, useMutation} from '@apollo/client';
-
-const GET_RECIPE = gql`
-  query GetRecipe($id: ID!) {
-    getRecipe(id: $id) {
-      id
-      title
-      ingredients
-      instructions
-      author
-    }
-  }
-`;
-
-const CREATE_RECIPE = gql`
-  mutation createRecipe(
-    $title: String!
-    $ingredients: [String]!
-    $instructions: String!
-    $author: String!
-  ) {
-    createRecipe(
-      title: $title
-      ingredients: $ingredients
-      instructions: $instructions
-      author: $author
-    ) {
-      id
-      title
-    }
-  }
-`;
-
-const UPDATE_RECIPE = gql`
-  mutation updateRecipe(
-    $id: ID!
-    $title: String!
-    $ingredients: [String]!
-    $instructions: String!
-  ) {
-    updateRecipe(
-      id: $id
-      title: $title
-      ingredients: $ingredients
-      instructions: $instructions
-    ) {
-      id
-      title
-    }
-  }
-`;
+import {useFetchRecipe} from '../middleware/hooks/useFetchRecipe';
+import {useCreateRecipe} from '../middleware/hooks/useCreateRecipe';
+import {useUpdateRecipe} from '../middleware/hooks/useUpdateRecipe';
+import {useHandleError} from '../middleware/hooks/useHandleError';
+import CustomTextInput from '../components/TextInput';
 
 type RecipeFormRouteProp = RouteProp<RootStackParamList, 'RecipeForm'>;
 
@@ -71,31 +25,24 @@ type ingredientsProps = {
   removeValue: (value: string) => void;
 };
 
-type RecipeError = {
-  name: string;
-  message: string;
-};
-
 const Ingredients = ({ingredients, removeValue}: ingredientsProps) => {
   if (ingredients.length) {
     return (
-      <React.Fragment>
+      <>
         <Text style={styles.fieldText}>Ingredients List: </Text>
-        {ingredients.map((ingredient: string, index: number) => {
-          return (
-            <View style={styles.ingredientName} key={index}>
-              <Text>{ingredient}</Text>
-              <Button title="Remove" onPress={() => removeValue(ingredient)} />
-            </View>
-          );
-        })}
-      </React.Fragment>
+        {ingredients.map((ingredient, index) => (
+          <View style={styles.ingredientName} key={index}>
+            <Text>{ingredient}</Text>
+            <Button title="Remove" onPress={() => removeValue(ingredient)} />
+          </View>
+        ))}
+      </>
     );
   } else {
     return (
-      <React.Fragment>
+      <>
         <Text>No Ingredients!</Text>
-      </React.Fragment>
+      </>
     );
   }
 };
@@ -110,29 +57,21 @@ export default function RecipeForm() {
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [ingredient, setIngredient] = useState('');
 
-  //Get Recipe Hook
-  const [getRecipe, {data: getRecipeData, error: getRecipeError}] =
-    useLazyQuery(GET_RECIPE);
+  const {fetchRecipe, getRecipeData} = useFetchRecipe();
+  const {handleCreateRecipe, createRecipeError} = useCreateRecipe();
+  const {handleUpdateRecipe, updateRecipeError} = useUpdateRecipe();
+  const {handleError} = useHandleError();
 
-  //Create Recipe Hook
-  const [createRecipe, {data: createRecipeData, error: createRecipeError}] =
-    useMutation(CREATE_RECIPE);
-
-  //Update Recipe Hook
-  const [updateRecipe, {data: updatedRecipeData, error: updatedRecipeError}] =
-    useMutation(UPDATE_RECIPE);
+  const fetchRecipeCallback = useCallback(fetchRecipe, [fetchRecipe]);
 
   useEffect(() => {
     if (route.params?.id) {
-      console.log('recipe', route.params.id);
-      getRecipe({variables: {id: route.params.id}});
+      fetchRecipeCallback(route.params.id);
     }
-  }, [route.params?.id, getRecipe]);
+  }, [fetchRecipeCallback, route.params?.id]);
 
   useEffect(() => {
     if (getRecipeData) {
-      console.log('getRecipeData', getRecipeData);
-
       setTitle(getRecipeData.getRecipe.title);
       setAuthor(getRecipeData.getRecipe.author);
       setInstructions(getRecipeData.getRecipe.instructions);
@@ -140,54 +79,30 @@ export default function RecipeForm() {
     }
   }, [getRecipeData]);
 
-  const fetchRecipeFailedAlert = useCallback(
-    (recipeError: RecipeError) => {
-      console.log('called......');
-
-      Alert.alert('Get Recipe Error', recipeError.message, [
-        {
-          text: 'Go Back',
-          onPress: () => navigation.goBack(),
-          style: 'cancel',
-        },
-      ]);
-    },
-    [navigation],
-  );
+  const handleErrorCallback = useCallback(handleError, [handleError]);
 
   useEffect(() => {
-    if (getRecipeError) {
-      fetchRecipeFailedAlert(getRecipeError);
-    } else if (createRecipeError) {
-      Alert.alert('Create Recipe Error', createRecipeError.message);
-    } else if (updatedRecipeError) {
-      Alert.alert('Update Recipe Error', updatedRecipeError.message);
+    if (createRecipeError) {
+      handleErrorCallback(createRecipeError, 'Create Recipe');
     }
-  }, [
-    getRecipeError,
-    createRecipeError,
-    updatedRecipeError,
-    fetchRecipeFailedAlert,
-  ]);
+    if (updateRecipeError) {
+      handleErrorCallback(updateRecipeError, 'Update Recipe');
+    }
+  }, [createRecipeError, updateRecipeError, handleErrorCallback]);
 
   const onValueChange = (type: string, value: string) => {
     switch (type) {
-      case 'recipeName': {
+      case 'recipeName':
         setTitle(value);
         break;
-      }
-      case 'author': {
+      case 'author':
         setAuthor(value);
         break;
-      }
-      case 'instructions': {
+      case 'instructions':
         setInstructions(value);
         break;
-      }
-
-      default: {
+      default:
         break;
-      }
     }
   };
 
@@ -208,11 +123,10 @@ export default function RecipeForm() {
     if (!ingredients.includes(value)) {
       Alert.alert(
         'Not Found!',
-        "The value you are trying to delete doesn't exists!",
+        "The value you are trying to delete doesn't exist!",
       );
     } else {
-      let removedValue = ingredients.filter(datum => datum !== value);
-      setIngredients(removedValue);
+      setIngredients(ingredients.filter(ing => ing !== value));
     }
   };
 
@@ -220,98 +134,69 @@ export default function RecipeForm() {
     navigation.goBack();
   };
 
-  const handleCreateRecipe = () => {
-    createRecipe({
-      variables: {
-        title,
-        ingredients,
-        instructions,
-        author: '664af203e107b7cb06047635',
-      },
-    });
-
-    console.log('createRecipeData', createRecipeData);
-    console.log(
-      'createRecipeError',
-      JSON.stringify(createRecipeError, null, 2),
-    );
-  };
-
-  const handleUpdateRecipe = (id: string) => {
-    updateRecipe({
-      variables: {
-        id,
-        title,
-        ingredients,
-        instructions,
-        author: '664af203e107b7cb06047635',
-      },
-    });
-
-    console.log('updatedRecipeData', updatedRecipeData);
-    console.log(
-      'updatedRecipeError',
-      JSON.stringify(updatedRecipeError, null, 2),
-    );
-  };
-
   const submitForm = () => {
     if (route.params?.id) {
-      handleUpdateRecipe(route.params.id);
+      handleUpdateRecipe(
+        route.params.id,
+        title,
+        ingredients,
+        instructions,
+        navigation,
+      );
     } else {
-      handleCreateRecipe();
+      handleCreateRecipe(title, ingredients, instructions, author, navigation);
     }
-
-    navigation.goBack();
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Button title={'Back'} onPress={goBack} />
-        <Text style={styles.screenHeader}>Recipe</Text>
-      </View>
-      <View style={styles.fieldContainer}>
-        <Text style={styles.fieldText}>Recipe Name</Text>
-        <TextInput
-          value={title}
-          style={styles.textInput}
-          onChangeText={value => onValueChange('recipeName', value)}
-        />
-      </View>
-      <View style={styles.fieldContainer}>
-        <Text style={styles.fieldText}>Author</Text>
-        <TextInput
-          value={author}
-          style={styles.textInput}
-          onChangeText={value => onValueChange('author', value)}
-        />
-      </View>
-      <View style={styles.fieldContainer}>
-        <Text style={styles.fieldText}>Instructions</Text>
-        <TextInput
-          value={instructions}
-          style={styles.textInput}
-          onChangeText={value => onValueChange('instructions', value)}
-        />
-      </View>
-      <View style={styles.fieldContainer}>
-        <Text style={styles.fieldText}>Ingredients</Text>
-        <View style={styles.ingredientsTextInputContainer}>
-          <TextInput
-            style={styles.textInput}
-            value={ingredient}
-            onChangeText={setIngredient}
-            onSubmitEditing={Keyboard.dismiss}
-          />
-          <Button title={'Add'} onPress={addIngredient} />
+      <ScrollView>
+        <View style={styles.header}>
+          <Button title={'Back'} onPress={goBack} />
+          <Text style={styles.screenHeader}>Recipe</Text>
         </View>
-      </View>
 
-      <View style={styles.fieldContainer}>
-        <Ingredients ingredients={ingredients} removeValue={removeIngredient} />
-      </View>
+        <CustomTextInput
+          title={'Recipe Name'}
+          type={'recipeName'}
+          textValue={title}
+          onValueChange={onValueChange}
+        />
 
+        <CustomTextInput
+          title={'Author'}
+          type={'author'}
+          textValue={author}
+          onValueChange={onValueChange}
+        />
+
+        <CustomTextInput
+          title={'Instructions'}
+          type={'instructions'}
+          textValue={instructions}
+          onValueChange={onValueChange}
+        />
+
+        <View style={styles.fieldContainer}>
+          <Text style={styles.fieldText}>Ingredients</Text>
+          <View style={styles.ingredientsTextInputContainer}>
+            <TextInput
+              style={styles.textInput}
+              value={ingredient}
+              onChangeText={setIngredient}
+              onSubmitEditing={Keyboard.dismiss}
+            />
+            <Button title={'Add'} onPress={addIngredient} />
+          </View>
+        </View>
+
+        <View style={styles.fieldContainer}>
+          <Ingredients
+            ingredients={ingredients}
+            removeValue={removeIngredient}
+          />
+        </View>
+      </ScrollView>
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.submitButton} onPress={submitForm}>
           <Text style={styles.textSubmit}>Submit</Text>

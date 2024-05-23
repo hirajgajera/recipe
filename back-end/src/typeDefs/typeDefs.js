@@ -5,6 +5,7 @@ const typeDefs = gql`
     id: ID!
     username: String!
     email: String!
+    password: String!
     recipies: [Recipe]
   }
 
@@ -17,13 +18,14 @@ const typeDefs = gql`
   }
 
   type Query {
+    getUser(email: String!, password: String!): User
     getRecipe(id: ID!): Recipe
     getAllRecipies: [Recipe]
     searchRecipies(keyword: String!): [Recipe]
   }
 
   type Mutation {
-    createUser(username: String!, email: String!): User
+    createUser(username: String!, email: String!, password: String!): User
     createRecipe(
       title: String!
       ingredients: [String]!

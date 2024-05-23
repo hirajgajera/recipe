@@ -1,9 +1,11 @@
-import React from 'react';
+import React, {useCallback, useEffect} from 'react';
 import {View, Text, FlatList, StyleSheet, Button} from 'react-native';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
 
 import {RecipeType} from '../types/recipe';
 import {RootStackParamList} from '../types/navigation';
+import {useDeleteRecipe} from '../middleware/hooks/useDeleteRecipe';
+import {useHandleError} from '../middleware/hooks/useHandleError';
 
 type RecipeProps = {
   data: RecipeType[];
@@ -35,8 +37,23 @@ const Ingredient = ({ingredients}: ingredients) => {
 export default function Recipies({data, setClicked}: RecipeProps) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-  const editRecipe = (recipeId: number) => {
+  const {handleError} = useHandleError();
+  const {handleDeleteRecipe, deleteRecipeError} = useDeleteRecipe();
+
+  const handleErrorCallback = useCallback(handleError, [handleError]);
+
+  useEffect(() => {
+    if (deleteRecipeError) {
+      handleErrorCallback(deleteRecipeError, 'Delete Recipe');
+    }
+  }, [deleteRecipeError, handleErrorCallback]);
+
+  const editRecipe = (recipeId: string) => {
     navigation.navigate('RecipeForm', {id: recipeId});
+  };
+
+  const deleteRecipe = (recipeId: string) => {
+    handleDeleteRecipe(recipeId);
   };
 
   const renderRecipe = ({item}: RecipeItem) => {
@@ -48,7 +65,7 @@ export default function Recipies({data, setClicked}: RecipeProps) {
           <Text style={styles.recipeName}>{item.title}</Text>
           <View style={styles.buttons}>
             <Button title={'Edit'} onPress={() => editRecipe(item.id)} />
-            <Button title={'Delete'} />
+            <Button title={'Delete'} onPress={() => deleteRecipe(item.id)} />
           </View>
         </View>
         <View style={styles.ingredientContainer}>
